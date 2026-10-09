@@ -26,6 +26,7 @@ jobs:
           buildah-image: quay.io/buildah/stable
           image: ${{ env.IMAGE_NAME }}
           tags: latest ${{ github.sha }}
+          context: "./image"
           containerfiles: |
             ./image/Containerfile
 
