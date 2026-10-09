@@ -157,11 +157,10 @@ RUN rm -rf /tmp/* /var/{log,cache,lib}/* /run/dnf
 # Regenerate initramfs
 #-------------------------------------------
 
-
-#        --verbose \ temporarily removed
 # Uses "$(basename "$(readlink -f /lib/modules/*/build)")" because /tmp was deleted
 RUN kernel_version="$(basename "$(readlink -f /lib/modules/*/build)")" \
     && dracut \
+        --verbose \
         --force \
         --kver "${kernel_version}" \
         "/usr/lib/modules/${kernel_version}/initramfs.img"

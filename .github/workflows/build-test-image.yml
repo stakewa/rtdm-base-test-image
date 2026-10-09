@@ -31,7 +31,7 @@ jobs:
         with:
           buildah-image: quay.io/buildah/stable
           image: ${{ env.IMAGE_NAME }}
-          tags: latest ${{ github.sha }}
+          tags: unstable ${{ github.sha }}
           context: "./image"
           containerfiles: |
             ./image/Containerfile
@@ -50,3 +50,18 @@ jobs:
           image: ${{ steps.build-image.outputs.image }}
           tags: ${{ steps.build-image.outputs.tags }}
           registry: ${{ env.REGISTRY }}
+      - name: Create promotion request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          SHA: ${{ github.sha }}
+          DIGEST: ${{ steps.push-to-ghcr.outputs.digest }}
+        run: |
+          gh issue create \
+            --title "Promote image ${SHA::12} to stable" \
+            --label "image-promotion" \
+            --body "Approve this issue to promote this image to the latest tag.
+
+          Image: \`${IMAGE}\`
+          Commit: \`${SHA}\`
+          Digest: \`${DIGEST}\`"
