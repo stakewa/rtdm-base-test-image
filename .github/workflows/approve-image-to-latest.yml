@@ -1,3 +1,4 @@
+name: Approve image to latest
 on:
   issue_comment:
     types: [ created ]

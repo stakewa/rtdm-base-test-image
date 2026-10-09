@@ -1,4 +1,4 @@
-name: Build test fedora bootc image with GitHub actions
+name: Build Fedora bootc image with GitHub Actions
 on:
   workflow_dispatch:
   push:
