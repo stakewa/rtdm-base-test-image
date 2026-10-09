@@ -3,7 +3,7 @@ FROM quay.io/fedora/fedora-bootc:latest
 #-------------------------------------------
 # Install tools to build kernel modules/overlays
 #-------------------------------------------
-RUN <<EOF
+RUN <<EORUN
 set -euo pipefail
 
 # Determine the kernel version represented by the installed build tree.
@@ -19,7 +19,7 @@ echo "$(basename "$(readlink -f /lib/modules/*/build)")" > /tmp/kernel-version
 
 # Log kernel version for troubleshooting purposes
 echo "Using updated kernel: $(cat /tmp/kernel-version)"
-EOF
+EORUN
 
 #-------------------------------------------
 # Display Driver ili9881d (patched for newer kernels)
@@ -28,7 +28,7 @@ COPY /drivers/ili9881d /tmp/build/drivers/ili9881d
 
 WORKDIR /tmp/build/drivers/ili9881d
 
-RUN <<EOF
+RUN <<EORUN
 set -euo pipefail
 
 # Build the patched kernel module.
@@ -45,7 +45,7 @@ depmod -a "$(cat /tmp/kernel-version)"
 
 # Check if succesfully installed
 modinfo -k "$(cat /tmp/kernel-version)" ili9881d
-EOF
+EORUN
 
 WORKDIR /
 
@@ -62,7 +62,7 @@ COPY /overlays /tmp/raspberry-pi-boot-files/overlays
 # Set working directory
 WORKDIR /tmp/raspberry-pi-boot-files
 
-RUN <<EOF
+RUN <<EORUN
 set -euo pipefail
 readonly DEST_DIR="/usr/lib/raspberry-pi-boot-files"
 
@@ -124,7 +124,7 @@ cp -an \
 # Check if overlay file was successfully created
 test "${DEST_DIR}/${DTBO_FILE}"
 
-EOF
+EORUN
 
 # Reset working directory
 WORKDIR /
@@ -167,7 +167,5 @@ RUN kernel_version="$(basename "$(readlink -f /lib/modules/*/build)")" \
 
 # Lint container image
 RUN bootc container lint
-
-# Test to see if action is run
 
 
