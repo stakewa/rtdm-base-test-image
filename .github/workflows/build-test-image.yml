@@ -60,7 +60,7 @@ jobs:
         run: |
           gh issue create \
             --title "New image ${SHA::12} requires testing and approval" \
-            --label "requires-image-testing" \
+            --label "unstable-image-released" \
             --body "Approve this issue to give it the latest tag.
           
           When tested, approval can be given by running \`/approve\`
