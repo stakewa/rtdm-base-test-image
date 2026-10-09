@@ -13,7 +13,7 @@ jobs:
       !github.event.issue.pull_request &&
       startsWith(github.event.comment.body, '/approve') &&
       contains(github.event.issue.labels.*.name, 'requires-image-testing')
-    runs-on: ubuntu-26.04-arm
+    runs-on: ubuntu-slim
 
     steps:
       - name: Verify commenter is a repository admin
