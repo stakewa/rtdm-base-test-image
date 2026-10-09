@@ -1,0 +1,53 @@
+# Put the RPi into 64 bit mode
+arm_64bit=1
+
+# We use U-Boot
+kernel=rpi_arm64_u-boot.bin
+
+# Run as fast as the firmware allows
+arm_boost=1
+
+# Enable UART
+enable_uart=1
+
+# Enable audio
+dtparam=audio=on
+
+# Old FW camera
+camera_auto_detect=0
+
+# Automatically load overlays for detected DSI displays
+display_auto_detect=0
+
+# Don't have the firmware create an initial video= setting in cmdline.txt.
+# Use the kernel's default instead.
+disable_fw_kms_setup=1
+
+# Stop the RPi turning on HDMI monitors on reboot
+hdmi_ignore_cec_init=1
+
+# Hotplug for debugging device
+hdmi_force_hotplug=1
+
+# Apply hardware overlay
+dtoverlay=reTerminal-DM
+# Use this over otg_mode=1, Allows for keyboard control inside U-Boot/Grub
+dtoverlay=dwc2,dr_mode=host
+
+# i2c required for touchscreen
+dtoverlay=i2c1,pins_2_3
+dtoverlay=i2c3,pins_4_5
+dtparam=i2c_arm=on
+dtparam=i2c_vc=on
+dtparam=i2s=on
+dtparam=spi=on
+
+# Upstream pi4 overlay
+dtoverlay=upstream-pi4
+
+# Enable DRM VC4 V3D driver with 256Mb CMA for RPi4
+dtoverlay=vc4-kms-v3d-pi4,cma-256
+max_framebuffers=2
+
+# Reset filters, apply to all
+[all]

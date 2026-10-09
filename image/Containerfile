@@ -1,0 +1,171 @@
+FROM quay.io/fedora/fedora-bootc:latest
+
+#-------------------------------------------
+# Install tools to build kernel modules/overlays
+#-------------------------------------------
+RUN <<EORUN
+set -euo pipefail
+
+# Determine the kernel version represented by the installed build tree.
+echo "Original image kernel: $(basename "$(readlink -f /lib/modules/*/build)")"
+# Store list of packages that will be installed, which can be used to remove them later.
+echo "kernel-devel-matched dtc" > /tmp/package-list
+
+# Gets kernel-devel package and matching kernel, usually newer than in original image.
+dnf install -y $(cat /tmp/package-list) # also installs cpp, make, etc...
+
+# Store kernel-version for later use
+echo "$(basename "$(readlink -f /lib/modules/*/build)")" > /tmp/kernel-version
+
+# Log kernel version for troubleshooting purposes
+echo "Using updated kernel: $(cat /tmp/kernel-version)"
+EORUN
+
+#-------------------------------------------
+# Display Driver ili9881d (patched for newer kernels)
+#-------------------------------------------
+COPY /drivers/ili9881d /tmp/build/drivers/ili9881d
+
+WORKDIR /tmp/build/drivers/ili9881d
+
+RUN <<EORUN
+set -euo pipefail
+
+# Build the patched kernel module.
+make all KERNEL_VERSION="$(cat /tmp/kernel-version)"
+
+# Test if it build correctly
+test -f ili9881d.ko
+
+# Install driver
+make install KERNEL_VERSION="$(cat /tmp/kernel-version)"
+
+# Run depmod
+depmod -a "$(cat /tmp/kernel-version)"
+
+# Check if succesfully installed
+modinfo -k "$(cat /tmp/kernel-version)" ili9881d
+EORUN
+
+WORKDIR /
+
+
+#-------------------------------------------
+# Store boot files required inside image at /usr/lib/raspberry-pi-boot-files
+#-------------------------------------------
+
+# Copy over user provided boot files
+COPY /raspberry-pi-boot-files /usr/lib/raspberry-pi-boot-files/
+# Copy dtc overlay
+COPY /overlays /tmp/raspberry-pi-boot-files/overlays
+
+# Set working directory
+WORKDIR /tmp/raspberry-pi-boot-files
+
+RUN <<EORUN
+set -euo pipefail
+readonly DEST_DIR="/usr/lib/raspberry-pi-boot-files"
+
+readonly RPM_DIR="rpm"
+readonly EXTRACTED_RPM_DIR="${RPM_DIR}/extracted"
+
+mkdir -p "${RPM_DIR}" "${EXTRACTED_RPM_DIR}"
+
+# Download packages containing files required for booting raspberry pi
+dnf download \
+    --quiet \
+    --resolve \
+    --alldeps \
+    --destdir="${RPM_DIR}" \
+    bcm283x-firmware \
+    uboot-images-armv8
+
+# Extract all RPM files
+for rpm_file in "${RPM_DIR}"/*.rpm; do
+    rpm2cpio "${rpm_file}" |
+        cpio \
+            --extract \
+            --make-directories \
+            --preserve-modification-time \
+            --directory="${EXTRACTED_RPM_DIR}" \
+            --quiet
+done
+
+# Copy boot files without overwriting existing files (such as user provided config.txt)
+cp -an \
+    "${EXTRACTED_RPM_DIR}/boot/efi/." \
+    "${DEST_DIR}/"
+
+cp -an \
+    "${EXTRACTED_RPM_DIR}/usr/share/uboot/rpi_arm64/u-boot.bin" \
+    "${DEST_DIR}/rpi_arm64_u-boot.bin"
+
+
+
+# Device-Tree Overlay
+readonly OVERLAYS_DIR="overlays"
+readonly DTS_FILE="${OVERLAYS_DIR}/reTerminal-DM.dts"
+readonly DTBO_FILE="${OVERLAYS_DIR}/reTerminal-DM.dtbo"
+
+# Create Device-Tree Overlay (dtc installed earlier)
+dtc \
+    --symbols \
+    --boot-cpu=0 \
+    --in-format dts \
+    --out-format dtb \
+    --out "${DTBO_FILE}" \
+    "${DTS_FILE}"
+
+# Safely copy over (in case user already provided their own reTerminal-DM.dtbo)
+cp -an \
+    "${DTBO_FILE}" \
+    "${DEST_DIR}/${DTBO_FILE}"
+
+# Check if overlay file was successfully created
+test "${DEST_DIR}/${DTBO_FILE}"
+
+EORUN
+
+# Reset working directory
+WORKDIR /
+
+
+#-------------------------------------------
+# Systemd services
+#-------------------------------------------
+# Copy the filetree folder to container root
+COPY /filetree /
+
+# Fixes screen not always booting up correctly after soft-reboot.
+RUN systemctl enable reterminal-dm-rebind-dsi.service
+
+#-------------------------------------------
+# Cleanup
+#-------------------------------------------
+# Remove previously installed development packages
+RUN dnf -y remove $(cat /tmp/package-list)
+# Remove old
+RUN dnf -y remove --oldinstallonly
+# Remove symvers installed in /boot by newer kernel-core
+RUN rm -f /boot/symvers-*.xz
+# Remove package caches
+RUN dnf clean all
+# Clean up /tmp, all logs and caches TODO check if /var/lib is safe to delete
+RUN rm -rf /tmp/* /var/{log,cache,lib}/* /run/dnf
+
+#-------------------------------------------
+# Regenerate initramfs
+#-------------------------------------------
+
+# Uses "$(basename "$(readlink -f /lib/modules/*/build)")" because /tmp was deleted
+RUN kernel_version="$(basename "$(readlink -f /lib/modules/*/build)")" \
+    && dracut \
+        --verbose \
+        --force \
+        --kver "${kernel_version}" \
+        "/usr/lib/modules/${kernel_version}/initramfs.img"
+
+# Lint container image
+RUN bootc container lint
+
+

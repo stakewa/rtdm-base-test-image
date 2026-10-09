@@ -1,0 +1,19 @@
+# Rebind the GPU display driver to help wake the DSI screen.
+# On some reTerminal devices, the screen may not turn back on after a soft reboot.
+# This service waits for the system to settle, unbinds and rebinds the GPU,
+# then waits for any resulting udev events to complete.
+#
+# TODO: Review these projects for related approaches:
+# https://github.com/chromasurf/reterminal_dm_cm4
+# https://github.com/ANUcybernetics/reterminal_dm/tree/main
+[Unit]
+Description=GPU Re-bind Service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'sleep 5 && echo gpu > /sys/bus/platform/drivers/vc4-drm/unbind && sleep 1 && echo gpu > /sys/bus/platform/drivers/vc4-drm/bind && udevadm settle --timeout=10'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

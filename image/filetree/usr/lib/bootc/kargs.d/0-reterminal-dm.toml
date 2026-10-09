@@ -1,0 +1,6 @@
+kargs = [
+    "logo.nologo",
+    "vt.global_cursor_default=0",
+    "console=tty3",
+    "loglevel=0",
+]
