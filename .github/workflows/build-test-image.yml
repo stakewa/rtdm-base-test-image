@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     name: Build Fedora bootc image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04-arm # For ARM64 architecture
     env:
       IMAGE_NAME: rtdm-base-test-image
       REGISTRY: ghcr.io/stakewa
