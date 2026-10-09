@@ -162,7 +162,6 @@ RUN kernel_version="$(basename "$(readlink -f /lib/modules/*/build)")" \
     && dracut \
         --verbose \
         --force \
-        --stdlog 1 \
         --kver "${kernel_version}" \
         "/usr/lib/modules/${kernel_version}/initramfs.img"
 

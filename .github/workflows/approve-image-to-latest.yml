@@ -1,0 +1,94 @@
+on:
+  issue_comment:
+    types: [ created ]
+
+permissions:
+  packages: write
+  issues: write
+
+jobs:
+  approve:
+    if: >-
+      !github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/approve') &&
+      contains(github.event.issue.labels.*.name, 'requires-image-testing')
+    runs-on: ubuntu-26.04-arm
+
+    steps:
+      - name: Verify commenter is a repository admin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+        run: |
+          set -euo pipefail
+
+          permission=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/collaborators/${COMMENTER}/permission" \
+            --jq '.permission')
+
+          if [[ "$permission" != "admin" ]]; then
+            echo "Commenter does not have admin permission (permission: $permission)."
+            exit 1
+          fi
+
+      - name: Read reference
+        id: image
+        env:
+          BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+
+          image=$(printf '%s\n' "$BODY" | sed -n 's/^Image: `\(.*\)`$/\1/p')
+          sha=$(printf '%s\n' "$BODY" | sed -n 's/^Commit: `\(.*\)`$/\1/p')
+          digest=$(printf '%s\n' "$BODY" | sed -n 's/^Digest: `\(.*\)`$/\1/p')
+
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: redhat-actions/podman-login@v2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag the approved image with latest
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          podman pull "${IMAGE}@${DIGEST}"
+          podman tag "${IMAGE}@${DIGEST}" "${IMAGE}:latest"
+          podman push "${IMAGE}:latest"
+      - name: Close older requires-image-testing issues and the current issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_ISSUE: ${{ github.event.issue.number }}
+          IMAGE: ${{ steps.image.outputs.image }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          gh issue list \
+            --state open \
+            --label requires-image-testing \
+            --limit 1000 \
+            --json number \
+            --jq '.[].number' |
+          while read -r number; do
+            if (( number < CURRENT_ISSUE )); then
+              gh issue close "$number" \
+                --comment "Superseded by #${CURRENT_ISSUE}."
+            fi
+          done
+
+          # Close the issue that triggered this action.
+          gh issue edit "$CURRENT_ISSUE" --add-label approved
+          gh issue close "$CURRENT_ISSUE" \
+            --comment "Image ${IMAGE}@${DIGEST} tagged with latest."

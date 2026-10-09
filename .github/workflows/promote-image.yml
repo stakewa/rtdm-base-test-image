@@ -1,57 +1,57 @@
-name: Promote image to latest
-
-on:
-  issues:
-    types: [labeled]
-
-permissions:
-  packages: write
-  issues: read
-
-jobs:
-  promote:
-    # Only act on promotion issues that have just received the approved label.
-    if: >-
-      github.event.label.name == 'approved' &&
-      contains(github.event.issue.labels.*.name, 'image-promotion')
-    runs-on: ubuntu-26.04-arm
-
-    steps:
-      - name: Read and validate image reference
-        id: image
-        env:
-          BODY: ${{ github.event.issue.body }}
-        run: |
-          set -euo pipefail
-
-          image=$(printf '%s\n' "$BODY" | sed -n 's/^Image: `\(.*\)`$/\1/p')
-          sha=$(printf '%s\n' "$BODY" | sed -n 's/^Commit: `\(.*\)`$/\1/p')
-          digest=$(printf '%s\n' "$BODY" | sed -n 's/^Digest: `\(.*\)`$/\1/p')
-
-          # Prevent an issue from directing this workflow to another registry/image.
-          test "$image" = "ghcr.io/stakewa/rtdm-base-test-image"
-          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-
-          echo "image=$image" >> "$GITHUB_OUTPUT"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "digest=$digest" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to GHCR
-        uses: redhat-actions/podman-login@v2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Promote the approved image
-        env:
-          IMAGE: ${{ steps.image.outputs.image }}
-          DIGEST: ${{ steps.image.outputs.digest }}
-        run: |
-          set -euo pipefail
-
-          # Pull the exact manifest by digest, tag it as latest, then push that tag.
-          podman pull "${IMAGE}@${DIGEST}"
-          podman tag "${IMAGE}@${DIGEST}" "${IMAGE}:latest"
-          podman push "${IMAGE}:latest"
+#name: Promote image to latest
+#
+#on:
+#  issues:
+#    types: [labeled]
+#
+#permissions:
+#  packages: write
+#  issues: read
+#
+#jobs:
+#  promote:
+#    # Only act on promotion issues that have just received the approved label.
+#    if: >-
+#      github.event.label.name == 'approved' &&
+#      contains(github.event.issue.labels.*.name, 'image-promotion')
+#    runs-on: ubuntu-26.04-arm
+#
+#    steps:
+#      - name: Read and validate image reference
+#        id: image
+#        env:
+#          BODY: ${{ github.event.issue.body }}
+#        run: |
+#          set -euo pipefail
+#
+#          image=$(printf '%s\n' "$BODY" | sed -n 's/^Image: `\(.*\)`$/\1/p')
+#          sha=$(printf '%s\n' "$BODY" | sed -n 's/^Commit: `\(.*\)`$/\1/p')
+#          digest=$(printf '%s\n' "$BODY" | sed -n 's/^Digest: `\(.*\)`$/\1/p')
+#
+#          # Prevent an issue from directing this workflow to another registry/image.
+#          test "$image" = "ghcr.io/stakewa/rtdm-base-test-image"
+#          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+#          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+#
+#          echo "image=$image" >> "$GITHUB_OUTPUT"
+#          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+#          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+#
+#      - name: Log in to GHCR
+#        uses: redhat-actions/podman-login@v2.0
+#        with:
+#          registry: ghcr.io
+#          username: ${{ github.actor }}
+#          password: ${{ secrets.GITHUB_TOKEN }}
+#
+#      - name: Promote the approved image
+#        env:
+#          IMAGE: ${{ steps.image.outputs.image }}
+#          DIGEST: ${{ steps.image.outputs.digest }}
+#        run: |
+#          set -euo pipefail
+#
+#          # Pull the exact manifest by digest, tag it as latest, then push that tag.
+#          podman pull "${IMAGE}@${DIGEST}"
+#          podman tag "${IMAGE}@${DIGEST}" "${IMAGE}:latest"
+#          podman push "${IMAGE}:latest"
