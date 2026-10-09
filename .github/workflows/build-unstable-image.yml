@@ -1,4 +1,4 @@
-name: Build Fedora bootc image with GitHub Actions
+name: Build Fedora bootc unstable image with GitHub Actions
 on:
   workflow_dispatch:
   push:
@@ -6,6 +6,8 @@ on:
       - 'image/**'
     branches:
       - master
+  schedule:
+      - cron: '0 0 * * 4' # 00:00 at Thursday
 
 permissions:
   contents: read
@@ -16,7 +18,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Fedora bootc image
+    name: Build Fedora bootc unstable image
     runs-on: ubuntu-26.04-arm # For ARM64 architecture
     env:
       IMAGE_NAME: rtdm-base-test-image
