@@ -12,6 +12,7 @@ permissions:
   packages: write
   attestations: write
   id-token: write
+  issues: write
 
 jobs:
   build:
