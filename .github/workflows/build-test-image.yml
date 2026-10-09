@@ -51,7 +51,7 @@ jobs:
           image: ${{ steps.build-image.outputs.image }}
           tags: ${{ steps.build-image.outputs.tags }}
           registry: ${{ env.REGISTRY }}
-      - name: Create promotion request
+      - name: Create issue for approval
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -59,9 +59,14 @@ jobs:
           DIGEST: ${{ steps.push-to-ghcr.outputs.digest }}
         run: |
           gh issue create \
-            --title "Promote image ${SHA::12} to stable" \
-            --label "image-promotion" \
-            --body "Approve this issue to promote this image to the latest tag.
+            --title "New image ${SHA::12} requires testing and approval" \
+            --label "requires-image-testing" \
+            --body "Approve this issue to give it the latest tag.
+          
+          When tested, approval can be given by running \`/approve\`
+          
+          In order to test the base, add the following to the top of the testing Containerfile:
+          \`FROM ${IMAGE}@${DIGEST}\`
 
           Image: \`${IMAGE}\`
           Commit: \`${SHA}\`
