@@ -12,7 +12,7 @@ jobs:
     if: >-
       !github.event.issue.pull_request &&
       startsWith(github.event.comment.body, '/approve') &&
-      contains(github.event.issue.labels.*.name, 'unstable-image-released')
+      contains(github.event.issue.labels.*.name, 'unstable-image-release')
     runs-on: ubuntu-slim
 
     steps:
@@ -67,7 +67,7 @@ jobs:
           podman pull "${IMAGE}@${DIGEST}"
           podman tag "${IMAGE}@${DIGEST}" "${IMAGE}:latest"
           podman push "${IMAGE}:latest"
-      - name: Close older unstable-image-released issues and the current issue
+      - name: Close older unstable-image-release issues and the current issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
@@ -79,7 +79,7 @@ jobs:
 
           gh issue list \
             --state open \
-            --label unstable-image-released \
+            --label unstable-image-release \
             --limit 1000 \
             --json number \
             --jq '.[].number' |
