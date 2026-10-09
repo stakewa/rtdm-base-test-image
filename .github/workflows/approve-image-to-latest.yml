@@ -91,6 +91,6 @@ jobs:
           done
 
           # Close the issue that triggered this action.
-          gh issue edit "$CURRENT_ISSUE" --add-label image-approved
+          gh issue edit "$CURRENT_ISSUE" --remove-label requires-image-testing
           gh issue close "$CURRENT_ISSUE" \
             --comment "Image ${IMAGE}@${DIGEST} tagged with latest."
