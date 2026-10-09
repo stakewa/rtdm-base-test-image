@@ -168,4 +168,6 @@ RUN kernel_version="$(basename "$(readlink -f /lib/modules/*/build)")" \
 # Lint container image
 RUN bootc container lint
 
+# Test to see if action is run
+
 
