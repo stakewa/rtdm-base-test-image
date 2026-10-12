@@ -136,6 +136,8 @@ WORKDIR /
 # Copy the filetree folder to container root
 COPY /filetree /
 
+RUN cat /etc/udev/rules.d/98-touchscreen-cal.rules
+
 # Fixes screen not always booting up correctly after soft-reboot.
 RUN systemctl enable reterminal-dm-rebind-dsi.service
 
