@@ -119,5 +119,5 @@ jobs:
           
           Commit SHA: \`${SHA}\`
           
-          Approve this issue to give it the \`latest\` tag, approval can be given by running \`/approve\`.
+          To approve this image and give it the \`latest\` tag, comment \`/approve\` under this issue.
           "
