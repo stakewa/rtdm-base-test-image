@@ -18,6 +18,7 @@ permissions:
 
 jobs:
   build:
+    timeout-minutes: 30
     name: Build unstable and test image
     runs-on: ubuntu-26.04-arm # For ARM64 architecture
     env:
