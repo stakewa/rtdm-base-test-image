@@ -107,14 +107,14 @@ jobs:
           Base image digest: \`${BASE_IMAGE_DIGEST}\`
           Base image full reference: 
           \`\`\`bash
-          ${BASE_IMAGE}@${BASE_IMAGE_DIGEST}\`
+          ${BASE_IMAGE}@${BASE_IMAGE_DIGEST}
           \`\`\`
           
           Test image: \`${TEST_IMAGE}\`
           Test image digest: \`${TEST_IMAGE_DIGEST}\`
           Test image full reference: 
           \`\`\`bash
-          ${TEST_IMAGE}@${TEST_IMAGE_DIGEST}\`
+          ${TEST_IMAGE}@${TEST_IMAGE_DIGEST}
           \`\`\`
           
           Commit SHA: \`${SHA}\`
