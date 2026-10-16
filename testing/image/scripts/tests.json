@@ -1,0 +1,31 @@
+[
+  {
+    "title": "Screen rotation",
+    "description": "The screen should be rotated correctly, landscape with the bottom of the screen facing the user.",
+    "question": "Is the screen rotated correctly?"
+  },
+  {
+    "title": "Touchscreen test",
+    "description": "Runs a script to test the touchscreen functionality for a total of 10 seconds.",
+    "question": "Did the touchscreen work and correctly follow your touch location?",
+    "script": "./touch.sh"
+  },
+  {
+    "title": "Wi-Fi test",
+    "description": "Runs a Wi-Fi scan and attempts to connect to Wi-Fi.",
+    "question": "Did the output look correct?",
+    "script": "./wifi.sh"
+  },
+  {
+    "title": "RS232 test",
+    "description": "Tests the RS232 serial communication interface.",
+    "question": "Did the output look correct?",
+    "script": "./rs232.sh"
+  },
+  {
+    "title": "GPIO test",
+    "description": "Tests the GPIO interface.",
+    "question": "Did the output look correct?",
+    "script": "./gpio.sh"
+  }
+]

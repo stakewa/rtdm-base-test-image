@@ -1,4 +1,4 @@
-name: Build Fedora bootc unstable image with GitHub Actions
+name: Build unstable and test image with GitHub Actions
 on:
   workflow_dispatch:
   push:
@@ -18,26 +18,17 @@ permissions:
 
 jobs:
   build:
-    name: Build Fedora bootc unstable image
+    name: Build unstable and test image
     runs-on: ubuntu-26.04-arm # For ARM64 architecture
     env:
-      IMAGE_NAME: rtdm-base-test-image
+      IMAGE_NAME: reterminal-dm-base-bootc-fedora
+      TEST_IMAGE_NAME: reterminal-dm-base-bootc-fedora-test
       REGISTRY: ghcr.io/stakewa
+      BUILD_TAG: build-${{ github.run_id }}
 
     steps:
       - name: Clone the repository
         uses: actions/checkout@v7
-
-      - name: Use buildah bud to create the image
-        id: build-image
-        uses: redhat-actions/buildah-build@v3.1.0
-        with:
-          buildah-image: quay.io/buildah/stable
-          image: ${{ env.IMAGE_NAME }}
-          tags: unstable ${{ github.sha }}
-          context: "./image"
-          containerfiles: |
-            ./image/Containerfile
 
       - name: Log in to the GitHub Container registry
         uses: redhat-actions/podman-login@v2.0
@@ -46,30 +37,68 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push to GitHub Container Repository
-        id: push-to-ghcr
+      - name: Build base image
+        id: build-base-image
+        uses: redhat-actions/buildah-build@v3.1.0
+        with:
+          buildah-image: quay.io/buildah/stable
+          image: ${{ env.IMAGE_NAME }}
+          tags: unstable ${{ env.BUILD_TAG }}
+          context: ./image
+          containerfiles: ./image/Containerfile
+
+      - name: Build test image from local base image
+        id: build-test-image
+        uses: redhat-actions/buildah-build@v3.1.0
+        with:
+          buildah-image: quay.io/buildah/stable
+          image: ${{ env.TEST_IMAGE_NAME }}
+          tags: ${{ env.BUILD_TAG }}
+          context: ./testing/image
+          containerfiles: ./testing/image/Containerfile
+          build-args: |
+            LOCAL_BASE_IMAGE=localhost/${{ env.BUILD_TAG }}
+
+      - name: Push base image to GitHub Container Repository
+        id: push-base-image-to-ghcr
         uses: redhat-actions/push-to-registry@v3.0.0
         with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
+          image: ${{ steps.build-base-image.outputs.image }}
+          tags: ${{ steps.build-base-image.outputs.tags }}
           registry: ${{ env.REGISTRY }}
+
+      - name: Push test image to GitHub Container Repository
+        id: push-test-image-to-ghcr
+        uses: redhat-actions/push-to-registry@v3.0.0
+        with:
+          image: ${{ steps.build-test-image.outputs.image }}
+          tags: ${{ steps.build-test-image.outputs.tags }}
+          registry: ${{ env.REGISTRY }}
+
       - name: Create issue for approval
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          BUILD_TAG: ${{ env.BUILD_TAG }}
+          BASE_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BUILD_TAG }}
+          TEST_IMAGE: ${{ env.REGISTRY }}/${{ env.TEST_IMAGE_NAME }}:${{ env.BUILD_TAG }}
           SHA: ${{ github.sha }}
-          DIGEST: ${{ steps.push-to-ghcr.outputs.digest }}
+          BASE_IMAGE_DIGEST: ${{ steps.push-base-image-to-ghcr.outputs.digest }}
         run: |
           gh issue create \
-            --title "New image ${SHA::12} requires testing and approval" \
+            --title "New image \`${BUILD_TAG}\` requires testing and approval" \
             --label "unstable-image-release" \
-            --body "Approve this issue to give it the latest tag.
-          
-          When tested, approval can be given by running \`/approve\`
-          
-          In order to test the base, add the following to the top of the testing Containerfile:
-          \`FROM ${IMAGE}@${DIGEST}\`
+            --body "A new image has been built and requires testing and approval.
 
-          Image: \`${IMAGE}\`
-          Commit: \`${SHA}\`
-          Digest: \`${DIGEST}\`"
+          The test image was also built from this new base image. Install it on a test device with:
+          \`bootc install reset --experimental --target-imgref ${TEST_IMAGE}:${SHA}\` [Reference](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html)
+          This might involve [cleaning up the old stateroot](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html#cleaning-up-the-old-stateroot)
+
+          Base image: \`${IMAGE}\`
+          Base image digest: \`${BASE_IMAGE_DIGEST}\`
+          
+          Test image: \`${TEST_IMAGE}\`
+          
+          Commit SHA: \`${SHA}\`
+          
+          Approve this issue to give it the \`latest\` tag, approval can be given by running \`/approve\`.
+          "

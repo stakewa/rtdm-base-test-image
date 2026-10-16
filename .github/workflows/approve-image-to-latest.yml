@@ -33,40 +33,38 @@ jobs:
           fi
 
       - name: Read reference
-        id: image
+        id: image-reference
         env:
           BODY: ${{ github.event.issue.body }}
         run: |
           set -euo pipefail
 
-          image=$(printf '%s\n' "$BODY" | sed -n 's/^Image: `\(.*\)`$/\1/p')
-          sha=$(printf '%s\n' "$BODY" | sed -n 's/^Commit: `\(.*\)`$/\1/p')
-          digest=$(printf '%s\n' "$BODY" | sed -n 's/^Digest: `\(.*\)`$/\1/p')
+          image=$(printf '%s\n' "$BODY" | sed -n 's/^Base image: `\(.*\)`$/\1/p')
+          digest=$(printf '%s\n' "$BODY" | sed -n 's/^Base image digest: `\(.*\)`$/\1/p')
 
-          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
 
           echo "image=$image" >> "$GITHUB_OUTPUT"
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
-      - name: Log in to GHCR
+      - name: Log in to the GitHub Container registry
         uses: redhat-actions/podman-login@v2.0
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag the approved image with latest
         env:
-          IMAGE: ${{ steps.image.outputs.image }}
-          DIGEST: ${{ steps.image.outputs.digest }}
+          IMAGE: ${{ steps.image-reference.outputs.image }}
+          DIGEST: ${{ steps.image-reference.outputs.digest }}
         run: |
           set -euo pipefail
 
           podman pull "${IMAGE}@${DIGEST}"
           podman tag "${IMAGE}@${DIGEST}" "${IMAGE}:latest"
           podman push "${IMAGE}:latest"
+
       - name: Close older unstable-image-release issues and the current issue
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -77,6 +75,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Close the issue that triggered this action first.
+          gh issue close "$CURRENT_ISSUE" \
+            --comment "Image \`${IMAGE}@${DIGEST}\` tagged with latest."
+
+          # Close any older unstable-image-release issues.
           gh issue list \
             --state open \
             --label unstable-image-release \
@@ -89,7 +92,3 @@ jobs:
                 --comment "Superseded by #${CURRENT_ISSUE}."
             fi
           done
-
-          # Close the issue that triggered this action.
-          gh issue close "$CURRENT_ISSUE" \
-            --comment "Image \`${IMAGE}@${DIGEST}\` tagged with latest."
