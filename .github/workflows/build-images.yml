@@ -1,4 +1,4 @@
-name: Build unstable and test image with GitHub Actions
+name: Build unstable and test image
 on:
   workflow_dispatch:
   push:
