@@ -27,6 +27,11 @@ jobs:
       REGISTRY: ghcr.io/stakewa
 
     steps:
+      # Based on https://github.com/orgs/community/discussions/25678
+      - name: Delete huge unnecessary tools folder
+        run:
+          rm -rf /opt/hostedtoolcache
+
       - name: Clone the repository
         uses: actions/checkout@v7
 
