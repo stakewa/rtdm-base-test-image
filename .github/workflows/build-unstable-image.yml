@@ -7,7 +7,7 @@ on:
     branches:
       - master
   schedule:
-      - cron: '0 0 * * 4' # 00:00 at Thursday
+    - cron: '0 0 * * 4' # 00:00 at Thursday
 
 permissions:
   contents: read
@@ -90,8 +90,13 @@ jobs:
             --body "A new image has been built and requires testing and approval.
 
           The test image was also built from this new base image. Install it on a test device with:
-          \`bootc install reset --experimental --target-imgref ${TEST_IMAGE}:${SHA}\` [Reference](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html)
+          \`\`\`bash
+          bootc install reset --experimental --target-imgref ${TEST_IMAGE}
+          \`\`\` 
+          [Install reset reference](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html)
+          
           This might involve [cleaning up the old stateroot](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html#cleaning-up-the-old-stateroot)
+
 
           Base image: \`${BASE_IMAGE}\`
           Base image digest: \`${BASE_IMAGE_DIGEST}\`

@@ -159,13 +159,15 @@ RUN rm -rf /tmp/* /var/{log,cache,lib}/* /run/dnf
 # Regenerate initramfs
 #-------------------------------------------
 
-# Uses "$(basename "$(readlink -f /lib/modules/*/build)")" because /tmp was deleted
+# Uses "$(basename "$(readlink -f /lib/modules/*/build)")" because /tmp was deleted, also removes dracut-logger.sh error messages from output to prevent filling up the logs
 RUN kernel_version="$(basename "$(readlink -f /lib/modules/*/build)")" \
+    && set -o pipefail \
     && dracut \
         --verbose \
         --force \
         --kver "${kernel_version}" \
-        "/usr/lib/modules/${kernel_version}/initramfs.img"
+        "/usr/lib/modules/${kernel_version}/initramfs.img" 2>&1 \
+       | stdbuf -oL grep -v 'dracut-logger\.sh'
 
 # Lint container image
 RUN bootc container lint
