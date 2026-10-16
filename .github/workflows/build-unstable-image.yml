@@ -21,7 +21,7 @@ jobs:
     name: Build unstable and test image
     runs-on: ubuntu-26.04-arm # For ARM64 architecture
     env:
-      IMAGE_NAME: reterminal-dm-base-bootc-fedora
+      BASE_IMAGE_NAME: reterminal-dm-base-bootc-fedora
       TEST_IMAGE_NAME: reterminal-dm-base-bootc-fedora-test
       REGISTRY: ghcr.io/stakewa
       BUILD_TAG: build-${{ github.run_id }}
@@ -42,7 +42,7 @@ jobs:
         uses: redhat-actions/buildah-build@v3.1.0
         with:
           buildah-image: quay.io/buildah/stable
-          image: ${{ env.IMAGE_NAME }}
+          image: ${{ env.BASE_IMAGE_NAME }}
           tags: unstable ${{ env.BUILD_TAG }}
           context: ./image
           containerfiles: ./image/Containerfile
@@ -57,7 +57,7 @@ jobs:
           context: ./testing/image
           containerfiles: ./testing/image/Containerfile
           build-args: |
-            LOCAL_BASE_IMAGE=localhost/${{ env.BUILD_TAG }}
+            LOCAL_BASE_IMAGE=localhost/${{ env.BASE_IMAGE_NAME }}:${{ env.BUILD_TAG }}
 
       - name: Push base image to GitHub Container Repository
         id: push-base-image-to-ghcr
@@ -79,7 +79,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BUILD_TAG: ${{ env.BUILD_TAG }}
-          BASE_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.BUILD_TAG }}
+          BASE_IMAGE: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BUILD_TAG }}
           TEST_IMAGE: ${{ env.REGISTRY }}/${{ env.TEST_IMAGE_NAME }}:${{ env.BUILD_TAG }}
           SHA: ${{ github.sha }}
           BASE_IMAGE_DIGEST: ${{ steps.push-base-image-to-ghcr.outputs.digest }}
@@ -93,7 +93,7 @@ jobs:
           \`bootc install reset --experimental --target-imgref ${TEST_IMAGE}:${SHA}\` [Reference](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html)
           This might involve [cleaning up the old stateroot](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html#cleaning-up-the-old-stateroot)
 
-          Base image: \`${IMAGE}\`
+          Base image: \`${BASE_IMAGE}\`
           Base image digest: \`${BASE_IMAGE_DIGEST}\`
           
           Test image: \`${TEST_IMAGE}\`
