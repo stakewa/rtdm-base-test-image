@@ -24,7 +24,6 @@ jobs:
       BASE_IMAGE_NAME: reterminal-dm-base-bootc-fedora
       TEST_IMAGE_NAME: reterminal-dm-base-bootc-fedora-test
       REGISTRY: ghcr.io/stakewa
-      BUILD_TAG: build-${{ github.run_id }}
 
     steps:
       - name: Clone the repository
@@ -43,7 +42,7 @@ jobs:
         with:
           buildah-image: quay.io/buildah/stable
           image: ${{ env.BASE_IMAGE_NAME }}
-          tags: unstable ${{ env.BUILD_TAG }}
+          tags: unstable
           context: ./image
           containerfiles: ./image/Containerfile
 
@@ -53,11 +52,11 @@ jobs:
         with:
           buildah-image: quay.io/buildah/stable
           image: ${{ env.TEST_IMAGE_NAME }}
-          tags: ${{ env.BUILD_TAG }}
+          tags: latest
           context: ./testing/image
           containerfiles: ./testing/image/Containerfile
           build-args: |
-            LOCAL_BASE_IMAGE=localhost/${{ env.BASE_IMAGE_NAME }}:${{ env.BUILD_TAG }}
+            LOCAL_BASE_IMAGE=localhost/${{ env.BASE_IMAGE_NAME }}@${{ steps.build-base-image.outputs.digest }}
 
       - name: Push base image to GitHub Container Repository
         id: push-base-image-to-ghcr
@@ -78,20 +77,20 @@ jobs:
       - name: Create issue for approval
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BUILD_TAG: ${{ env.BUILD_TAG }}
-          BASE_IMAGE: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ env.BUILD_TAG }}
-          TEST_IMAGE: ${{ env.REGISTRY }}/${{ env.TEST_IMAGE_NAME }}:${{ env.BUILD_TAG }}
-          SHA: ${{ github.sha }}
+          BASE_IMAGE: ${{ env.REGISTRY }}/${{ env.BASE_IMAGE_NAME }}
           BASE_IMAGE_DIGEST: ${{ steps.push-base-image-to-ghcr.outputs.digest }}
+          TEST_IMAGE: ${{ env.REGISTRY }}/${{ env.TEST_IMAGE_NAME }}
+          TEST_IMAGE_DIGEST: ${{ steps.push-test-image-to-ghcr.outputs.digest }}
+          SHA: ${{ github.sha }}
         run: |
           gh issue create \
-            --title "New image \`${BUILD_TAG}\` requires testing and approval" \
+            --title "New image \`${BASE_IMAGE}\` requires testing and approval" \
             --label "unstable-image-release" \
             --body "A new image has been built and requires testing and approval.
 
           The test image was also built from this new base image. Install it on a test device with:
           \`\`\`bash
-          bootc install reset --experimental --target-imgref ${TEST_IMAGE}
+          bootc install reset --experimental --target-imgref ${TEST_IMAGE}@${TEST_IMAGE_DIGEST}
           \`\`\` 
           [Install reset reference](https://bootc.dev/bootc/bootc-experimental-install-reset.7.html)
           
@@ -100,8 +99,17 @@ jobs:
 
           Base image: \`${BASE_IMAGE}\`
           Base image digest: \`${BASE_IMAGE_DIGEST}\`
+          Base image full reference: 
+          \`\`\`bash
+          ${BASE_IMAGE}@${BASE_IMAGE_DIGEST}\`
+          \`\`\`
           
           Test image: \`${TEST_IMAGE}\`
+          Test image digest: \`${TEST_IMAGE_DIGEST}\`
+          Test image full reference: 
+          \`\`\`bash
+          ${TEST_IMAGE}@${TEST_IMAGE_DIGEST}\`
+          \`\`\`
           
           Commit SHA: \`${SHA}\`
           

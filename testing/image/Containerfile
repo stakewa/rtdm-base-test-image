@@ -10,6 +10,9 @@ RUN mkdir -p /etc/systemd/system/getty@tty1.service.d && \
       'ExecStart=-/sbin/agetty --autologin root --noclear - $TERM' \
       > /etc/systemd/system/getty@tty1.service.d/autologin.conf
 
+# Create a password for root, to allow ssh login on test image
+RUN echo 'root:test-image' | chpasswd
+
 RUN dnf install libinput-utils -y
 
 # Clean up

@@ -1,4 +1,4 @@
-name: Approve image to latest
+name: Tag base image with latest
 on:
   issue_comment:
     types: [ created ]
@@ -8,7 +8,7 @@ permissions:
   issues: write
 
 jobs:
-  approve:
+  tag:
     if: >-
       !github.event.issue.pull_request &&
       startsWith(github.event.comment.body, '/approve') &&
@@ -32,7 +32,7 @@ jobs:
             exit 1
           fi
 
-      - name: Read reference
+      - name: Get base image reference from issue body
         id: image-reference
         env:
           BODY: ${{ github.event.issue.body }}
